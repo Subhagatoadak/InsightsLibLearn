@@ -14,7 +14,7 @@ from llm_service.llm_generator import generate_llm_response
 ##############################################
 
 def page_landing():
-    st.header("Welcome to GenAI Tutor")
+    st.header("Welcome to InsightsLib Learn")
     st.write("Please complete the following survey so we can tailor your learning experience.")
 
     # If the profile hasn't been submitted, show the form.
@@ -255,7 +255,7 @@ def inject_custom_css():
 ##############################################
 
 def main():
-    st.set_page_config(page_title="GenAI Tutor", layout="wide")
+    st.set_page_config(page_title="InsightsLib Learn", layout="wide")
     inject_custom_css()
 
     # If the profile hasn't been submitted or the analysis not approved,
