@@ -18,8 +18,8 @@
 ## **🛠 Installation**
 ### **1️⃣ Clone the Repository**
 ```bash
-git clone https://github.com/your-username/insightsliblearn.git
-cd insightsliblearn
+git clone https://github.com/Subhagatoadak/InsightsLibLearn.git
+cd InsightsLibLearn
 ```
 
 ### **2️⃣ Install Dependencies**
@@ -30,7 +30,7 @@ pip install -r requirements.txt
 
 ### **3️⃣ Run the Application**
 ```bash
-streamlit run app.py
+streamlit run Tutor/tutor.py
 ```
 
 ---
