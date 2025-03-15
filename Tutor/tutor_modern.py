@@ -10,22 +10,6 @@ if root_path not in sys.path:
 from llm_service.llm_generator import generate_llm_response
 
 ##############################################
-# Placeholder Functions for Missing Dependencies
-##############################################
-
-def search_web_resources(query):
-    """
-    Placeholder for web search functionality.
-    """
-    return f"Search functionality is not implemented yet for query: '{query}'."
-
-def analyze_formal_wear(image_file):
-    """
-    Placeholder for attire analysis.
-    """
-    return "Attire analysis functionality is not implemented yet."
-
-##############################################
 # Helper Functions for Dynamic Topics & Lessons
 ##############################################
 
@@ -81,8 +65,10 @@ def initialize_interview():
     - Generate a list of interview questions based on the lesson content.
     - Store the difficulty and interviewer behavior.
     """
+    # Let’s assume we generate 3 questions for simplicity.
     profile = st.session_state.profile
-    # Use the first generated lesson as context (if available)
+    # You might decide to base this on one of the generated lessons
+    # For demonstration, pick the first lesson available:
     lesson_context = ""
     if "lessons" in st.session_state and st.session_state.lessons:
         lesson_context = list(st.session_state.lessons.values())[0]
@@ -124,10 +110,11 @@ def finalize_interview():
     Summarize the interview session by calculating an overall score and highlighting the candidate's strengths and weaknesses.
     """
     evaluations = st.session_state.interview_scores
+    # For simplicity, assume each evaluation includes a "Score: X." line
     scores = []
     feedbacks = []
     for eval_text in evaluations:
-        # Extract score (simple parsing, adjust as needed)
+        # Extract score (this is a simple parsing – you might want to improve the extraction)
         try:
             score_line = [line for line in eval_text.split("\n") if "Score:" in line][0]
             score = int(''.join(filter(str.isdigit, score_line)))
@@ -265,18 +252,6 @@ def page_chatbot():
                                                  model=model, temperature=temperature)
             st.markdown("**Response:**")
             st.write(response)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-def page_web_resource_search():
-    st.header("Web Resource Search")
-    with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        query = st.text_input("Enter a topic to search for resources:", key="web_search_query")
-        if st.button("Search", key="web_search_button"):
-            with st.spinner("Searching for resources..."):
-                search_results = search_web_resources(query)
-            st.markdown("**Search Results:**")
-            st.write(search_results)
         st.markdown('</div>', unsafe_allow_html=True)
 
 def page_dynamic_lessons():
@@ -423,7 +398,7 @@ def main():
         st.title("GenAI Tutor: Learn Python & Generative AI")
         st.markdown("<hr>", unsafe_allow_html=True)
 
-        # Tutor functionalities using tabs
+        # Tutor functionalities using tabs (pills)
         #tabs = st.tabs(["Chatbot", "Web Resource Search", "Dynamic Lessons", "Interview & Assessment", "Attire Analysis"])
         tabs = st.tabs(["Chatbot", "Dynamic Lessons", "Interview & Assessment", "Attire Analysis"])
         with tabs[0]:
