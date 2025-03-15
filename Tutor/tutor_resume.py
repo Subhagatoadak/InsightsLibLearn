@@ -60,7 +60,7 @@ def generate_lesson_content(topic, subtopic):
     """
     Generate a lesson that matches the user's language tone and personality.
     The lesson prompt incorporates details such as the user's personality,
-    hobby/tone sample, learning goals, and current level. 
+    hobby/tone sample, learning goals, current level, and languages.
     """
     profile = st.session_state.profile
     languages = profile.get('languages','N/A')
@@ -70,19 +70,16 @@ def generate_lesson_content(topic, subtopic):
         f"Personality: {profile.get('personality', 'N/A')}\n"
         f"Hobby/Tone Sample: {profile.get('tone_paragraph', 'N/A')}\n"
         f"Learning Goals: {profile.get('learning_goals', 'N/A')}\n"
-        f"Current Level: {profile.get('level', 'N/A')}\n\n"
-        f"languages: {profile.get('languages','N/A')}\n\n"
+        f"Current Level: {profile.get('level', 'N/A')}\n"
+        f"Languages: {languages}\n\n"
         f"Provide a comprehensive lesson on the topic '{topic}' specifically focusing on the subtopic '{subtopic}'. "
         "The lesson should match the user's language style, include real-life examples related to their hobby, "
-        "and offer actionable recommendations to help the user feel comfortable and engaged in their learning journey."
-        "Hobby is not the topic of interest, the topic/topics provided above are the topics to be looked at."
-        "If in the personality type the user mentions he/she is fun loving then add small humour in the langauges provided."
-        f"Always provide examples, idioms, proverbs in content strictly in all the languages {languages} provided to make it more relatable"
-        ""
-        
+        "and offer actionable recommendations to help the user feel comfortable and engaged in their learning journey. "
+        "Note: The hobby is only for tone reference, while the topics to learn are those provided above. "
+        "If the user mentions being fun loving, include small humour. Also, provide examples, idioms, and proverbs "
+        "in all the languages specified."
     )
     lesson_content = generate_llm_response(prompt, provider="openai", model="gpt-4o", temperature=0.7)
-    # Save lesson in session state for later context (e.g., chatbot or interview)
     if "lessons" not in st.session_state:
         st.session_state.lessons = {}
     st.session_state.lessons[f"{topic} - {subtopic}"] = lesson_content
@@ -93,6 +90,7 @@ def generate_lesson_content(topic, subtopic):
 ##############################################
 
 def initialize_interview():
+   def initialize_interview():
     """
     Initialize an interview session:
     - Generate a list of interview questions based on the lesson content.
@@ -120,6 +118,7 @@ def initialize_interview():
         "difficulty": st.session_state.get("interview_difficulty", "Medium"),
         "behavior": st.session_state.get("interview_behavior", "Medium")
     }
+
 
 def evaluate_interview_answer(answer, question):
     """
@@ -152,12 +151,8 @@ def finalize_interview():
             feedbacks.append(feedback_line)
         except Exception:
             pass
-    if scores:
-        avg_score = sum(scores) / len(scores)
-    else:
-        avg_score = 0
-    summary = f"Final Interview Score: {avg_score:.1f}/10\n\n"
-    summary += "Feedback Summary:\n"
+    avg_score = sum(scores) / len(scores) if scores else 0
+    summary = f"Final Interview Score: {avg_score:.1f}/10\n\nFeedback Summary:\n"
     for fb in feedbacks:
         summary += f"- {fb}\n"
     return summary
@@ -192,9 +187,12 @@ def page_landing():
                              options=["Beginner", "Intermediate", "Advanced"])
             topics = st.text_input("What topics are you most interested in? (e.g., Chatbots, Data Science, etc.)")
             
+            # New: Resume upload field
+            resume_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"], key="resume_file")
+            
             submitted = st.form_submit_button("Submit Profile")
             if submitted:
-                st.session_state.profile = {
+                profile_data = {
                     "name": name,
                     "age": age,
                     "country": country,
@@ -206,6 +204,11 @@ def page_landing():
                     "level": level,
                     "topics": topics
                 }
+                # If a resume was uploaded, extract its text and store it.
+                if resume_file is not None:
+                    resume_text = extract_text_from_pdf(resume_file)
+                    profile_data["resume_text"] = resume_text
+                st.session_state.profile = profile_data
                 st.session_state.profile_completed = True
                 st.success("Profile submitted successfully!")
                 st.rerun()  # Force a rerun to display the assessment
@@ -222,7 +225,8 @@ def page_landing():
             "Tone Sample": profile.get("tone_paragraph", ""),
             "Learning Goals": profile.get("learning_goals", ""),
             "Current Level": profile.get("level", ""),
-            "Topics of Interest": profile.get("topics", "")
+            "Topics of Interest": profile.get("topics", ""),
+            "Resume Provided": "Yes" if profile.get("resume_text") else "No"
         })
 
         if "profile_analysis" not in st.session_state:
@@ -230,17 +234,19 @@ def page_landing():
                 "Based on the following user profile details, provide a comprehensive assessment that includes:\n\n"
                 "1. An evaluation of the user's personality type from their self-description.\n"
                 "2. An analysis of their language style and tone as inferred from their writing sample.\n"
-                "3. A discussion of their learning goals and current level, including actionable recommendations on which topics to focus on and steps to achieve their goals.\n\n"
-                "4. The hobby should not be included as topics to learn. It should only be included if the user explicitly mentions it in the topics."
+                "3. A discussion of their learning goals and current level, including actionable recommendations on which topics to focus on and steps to achieve their goals.\n"
+                "4. If a resume is provided, a brief summary of the important points from the resume.\n\n"
                 f"Name: {profile.get('name', 'N/A')}\n"
                 f"Age: {profile.get('age', 'N/A')}\n"
                 f"Personality Description: {profile.get('personality', 'N/A')}\n"
                 f"Writing Sample (Tone & Language Style): {profile.get('tone_paragraph', 'N/A')}\n"
                 f"Learning Goals: {profile.get('learning_goals', 'N/A')}\n"
                 f"Current Level: {profile.get('level', 'N/A')}\n"
-                f"Topics of Interest: {profile.get('topics', 'N/A')}\n\n"
-                "Please provide a detailed, insightful analysis along with recommendations on how the user can reach their learning goals."
+                f"Topics of Interest: {profile.get('topics', 'N/A')}\n"
             )
+            if profile.get("resume_text"):
+                prompt += f"Resume Content: {profile.get('resume_text')}\n\n"
+            prompt += "Please provide a detailed, insightful analysis along with recommendations on how the user can reach their learning goals."
             analysis = generate_llm_response(prompt,
                                              provider="openai",
                                              model="gpt-4o",
@@ -269,11 +275,8 @@ def page_web_resource_search():
 
 def page_dynamic_lessons():
     st.header("Dynamic Lessons")
-    # Display existing dynamic topics and allow user to add new ones.
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        
-        # Display existing topics if available
         dynamic_topics = st.session_state.get("dynamic_topics", {})
         if dynamic_topics:
             selected_topic = st.selectbox("Select a Topic", list(dynamic_topics.keys()), key="selected_topic")
@@ -294,7 +297,6 @@ def page_dynamic_lessons():
         
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Section to add additional topics
         st.subheader("Add Additional Topics")
         additional_topics = st.text_input("Enter additional topics (comma-separated)", key="additional_topics")
         if st.button("Add Topics"):
@@ -318,7 +320,6 @@ def page_interview_assessment():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("Interview Settings")
-        # Use local variables for widget selections; these values are automatically stored in st.session_state
         difficulty = st.selectbox("Select Interview Difficulty", ["Easy", "Medium", "Hard"], key="interview_difficulty")
         behavior = st.selectbox("Select Interviewer Behavior", ["Aggressive", "Polite", "Medium"], key="interview_behavior")
         
@@ -389,7 +390,7 @@ def page_pdf_chatbot():
         if uploaded_pdf:
             with st.spinner("Extracting text from PDF..."):
                 pdf_text = extract_text_from_pdf(uploaded_pdf)
-            st.session_state.pdf_text = pdf_text  # store extracted text in session state
+            st.session_state.pdf_text = pdf_text
             st.success("PDF uploaded successfully. You can now ask questions related to this PDF.")
         else:
             st.info("No PDF uploaded. You can chat with the default knowledge base.")
@@ -399,7 +400,8 @@ def page_pdf_chatbot():
                 if "pdf_text" in st.session_state and st.session_state.pdf_text:
                     kb_text = st.session_state.pdf_text
                 else:
-                    kb_text = "This is the default knowledge base of the GenAI Tutor. It includes comprehensive lessons on Python, Generative AI, and more."
+                    kb_text = ("This is the default knowledge base of the GenAI Tutor. It includes comprehensive lessons on Python, "
+                               "Generative AI, and more.")
                 prompt = f"Given the following text:\n\n{kb_text}\n\nAnswer the following question in detail:\n{query}"
                 answer = generate_llm_response(prompt, provider="openai", model="gpt-4o", temperature=0.7)
             st.markdown("**Answer:**")
@@ -466,7 +468,7 @@ def main():
     st.set_page_config(page_title="InsightsLib Learn", layout="wide")
     inject_custom_css()
 
-    # If the profile hasn't been submitted or the analysis not approved, show the landing page.
+    # If the profile hasn't been submitted or analysis not approved, show the landing page.
     if ("profile_completed" not in st.session_state or not st.session_state.profile_completed) or \
        ("profile_analysis_done" not in st.session_state or not st.session_state.profile_analysis_done):
         page_landing()
@@ -474,13 +476,10 @@ def main():
         st.title("GenAI Tutor: Learn Python & Generative AI")
         st.markdown("<hr>", unsafe_allow_html=True)
 
-        # Tutor functionalities using tabs
-        tabs = st.tabs(["Dynamic Lessons","Web Resource Search", "PDF Chatbot",  "Interview & Assessment", "Attire Analysis"])
+        tabs = st.tabs(["Dynamic Lessons", "Web Resource Search", "PDF Chatbot", "Interview & Assessment", "Attire Analysis"])
         with tabs[0]:
             page_dynamic_lessons()
-            
         with tabs[1]:
-            
             page_web_resource_search()
         with tabs[2]:
             page_pdf_chatbot()
@@ -488,7 +487,6 @@ def main():
             page_interview_assessment()
         with tabs[4]:
             page_attire_analysis()
-            
 
 if __name__ == "__main__":
     main()
