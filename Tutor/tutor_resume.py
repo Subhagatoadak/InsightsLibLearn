@@ -15,9 +15,9 @@ from llm_service.llm_generator import generate_llm_response
 
 def search_web_resources(query):
     """
-    Placeholder for web search functionality.
+    Placeholder for basic search functionality.
     """
-    return f"Search functionality is not implemented yet for query: '{query}'."
+    return f"Basic search for '{query}' is not implemented."
 
 def analyze_formal_wear(image_file):
     """
@@ -34,6 +34,17 @@ def extract_text_from_pdf(pdf_file):
     for page in pdf_reader.pages:
         text += page.extract_text() or ""
     return text
+
+def get_web_resources(query):
+    """
+    Dummy function to simulate retrieval of web resources.
+    Returns a dictionary with PDFs, Articles, and Videos.
+    """
+    return {
+         "PDFs": [f"PDF result {i} for query '{query}'" for i in range(1, 4)],
+         "Articles": [f"Article result {i} for query '{query}'" for i in range(1, 4)],
+         "Videos": [f"Video result {i} for query '{query}'" for i in range(1, 4)]
+    }
 
 ##############################################
 # Helper Functions for Dynamic Topics & Lessons
@@ -64,6 +75,7 @@ def generate_lesson_content(topic, subtopic):
     """
     profile = st.session_state.profile
     languages = profile.get('languages','N/A')
+    profile_assessment = profile.get('assessment','N/A')
     prompt = (
         f"Based on the following user profile details:\n"
         f"Name: {profile.get('name', 'N/A')}\n"
@@ -77,9 +89,13 @@ def generate_lesson_content(topic, subtopic):
         "and offer actionable recommendations to help the user feel comfortable and engaged in their learning journey. "
         "Note: The hobby is only for tone reference, while the topics to learn are those provided above. "
         "If the user mentions being fun loving, include small humour. Also, provide examples, idioms, and proverbs "
-        "in all the languages specified."
+        "in all the specified languages to make the content relatable. Do not add idioms/proverbs/jokes solely for content; "
+        "make it very relatable. In case English is not mentioned in the languages, provide the content in the first language provided. "
+        "Provide detailed explanations and examples to help the user understand the topic better. "
+        f"Based on the {profile_assessment}, highlight strengths and weaknesses while designing a learning curve appropriate for the user's age."
     )
     lesson_content = generate_llm_response(prompt, provider="openai", model="gpt-4o", temperature=0.7)
+    # Append the new lesson to the list of lessons in session state.
     if "lessons" not in st.session_state:
         st.session_state.lessons = {}
     st.session_state.lessons[f"{topic} - {subtopic}"] = lesson_content
@@ -89,36 +105,39 @@ def generate_lesson_content(topic, subtopic):
 # Interview Session Functions
 ##############################################
 
-def initialize_interview():
-   def initialize_interview():
+def initialize_interview(subtopics):
     """
     Initialize an interview session:
     - Generate a list of interview questions based on the lesson content.
     - Store the difficulty and interviewer behavior.
     """
     profile = st.session_state.profile
-    # Use the first generated lesson as context (if available)
     lesson_context = ""
     if "lessons" in st.session_state and st.session_state.lessons:
+        # For simplicity, use the first lesson as context.
         lesson_context = list(st.session_state.lessons.values())[0]
     prompt = (
-        f"Based on the following lesson content:\n{lesson_context}\n\n"
-        f"Generate 3 interview questions for a candidate who has learned the above content. "
-        "The questions should assess understanding and practical application. "
+        f"Based on the following subtopics:\n{subtopics}\n\n"
+        "Generate 3 interview questions for a candidate who has learned the above content. "
         "Return them as a numbered list."
     )
     questions_str = generate_llm_response(prompt, provider="openai", model="gpt-4o", temperature=0.7)
-    # Parse questions (assuming they come as numbered lines)
+    # Parse questions by splitting on newlines and removing unwanted prefixes.
     questions = [q.strip() for q in questions_str.split("\n") if q.strip()]
+    # Fallback if the generated list appears to be generic or empty.
+    if not questions or any("Certainly!" in q for q in questions):
+        questions = [
+            "What is one key takeaway from the lesson?",
+            "How would you apply the concepts learned to a real-world scenario?",
+            "Can you explain a challenging aspect of the lesson in your own words?"
+        ]
     st.session_state.interview_questions = questions
     st.session_state.current_question_index = 0
     st.session_state.interview_scores = []
-    # Store interviewer settings using the widget values
     st.session_state.interviewer_settings = {
         "difficulty": st.session_state.get("interview_difficulty", "Medium"),
         "behavior": st.session_state.get("interview_behavior", "Medium")
     }
-
 
 def evaluate_interview_answer(answer, question):
     """
@@ -137,7 +156,7 @@ def evaluate_interview_answer(answer, question):
 
 def finalize_interview():
     """
-    Summarize the interview session by calculating an overall score and highlighting the candidate's strengths and weaknesses.
+    Summarize the interview session by calculating an overall score and highlighting strengths and weaknesses.
     """
     evaluations = st.session_state.interview_scores
     scores = []
@@ -266,12 +285,19 @@ def page_landing():
 
 def page_web_resource_search():
     st.header("Web Resource Search")
-    query = st.text_input("Enter a topic to search for resources:", key="web_search_query")
+    query = st.text_input("Enter research terms:", key="web_search_query")
     if st.button("Search", key="web_search_button"):
-        with st.spinner("Searching for resources..."):
-            search_results = search_web_resources(query)
-        st.markdown("**Search Results:**")
-        st.write(search_results)
+        with st.spinner("Searching for web resources..."):
+            resources = get_web_resources(query)
+        st.markdown("### PDFs")
+        for pdf in resources["PDFs"]:
+            st.write(pdf)
+        st.markdown("### Articles")
+        for article in resources["Articles"]:
+            st.write(article)
+        st.markdown("### Videos")
+        for video in resources["Videos"]:
+            st.write(video)
 
 def page_dynamic_lessons():
     st.header("Dynamic Lessons")
@@ -282,6 +308,7 @@ def page_dynamic_lessons():
             selected_topic = st.selectbox("Select a Topic", list(dynamic_topics.keys()), key="selected_topic")
             subtopics = dynamic_topics.get(selected_topic, [])
             if subtopics:
+                st.session_state.subtopics = subtopics
                 selected_subtopic = st.selectbox("Select a Subtopic", subtopics, key="selected_subtopic")
             else:
                 selected_subtopic = ""
@@ -292,8 +319,12 @@ def page_dynamic_lessons():
         if st.button("Get Lesson", key="lesson_button") and selected_topic and selected_subtopic:
             with st.spinner("Generating lesson content..."):
                 lesson_content = generate_lesson_content(selected_topic, selected_subtopic)
-            st.markdown("**Lesson Content:**")
-            st.write(lesson_content)
+            # Append the new lesson and display all lessons
+            st.success("Lesson generated!")
+            st.markdown("#### Generated Lessons")
+            for key, content in st.session_state.lessons.items():
+                st.markdown(f"**{key}**")
+                st.write(content)
         
         st.markdown("</div>", unsafe_allow_html=True)
         
@@ -324,7 +355,7 @@ def page_interview_assessment():
         behavior = st.selectbox("Select Interviewer Behavior", ["Aggressive", "Polite", "Medium"], key="interview_behavior")
         
         if st.button("Start Interview", key="start_interview"):
-            initialize_interview()
+            initialize_interview(st.session_state.subtopics)
             st.success("Interview session started!")
             st.rerun()
 
