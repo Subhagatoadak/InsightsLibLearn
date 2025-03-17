@@ -2,13 +2,22 @@ import streamlit as st
 from PIL import Image
 import os, sys
 import PyPDF2  # for extracting text from PDFs
-
+import json
+from pydantic import BaseModel
 # Adjust the root path and import your custom LLM service
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
-from llm_service.llm_generator import generate_llm_response
+from llm_service.llm_generator import generate_llm_response,generate_llm_json
 
+
+class getWeb(BaseModel):
+    pdfs: list[str]
+    articles: list[str]
+    html_links: list[str]
+    courses: list[str]
+    videos: list[str]
+    
 ##############################################
 # Placeholder Functions for Missing Dependencies
 ##############################################
@@ -37,14 +46,32 @@ def extract_text_from_pdf(pdf_file):
 
 def get_web_resources(query):
     """
-    Dummy function to simulate retrieval of web resources.
-    Returns a dictionary with PDFs, Articles, and Videos.
+    Use the LLM to generate a list of recommended resources for learning about the given topic.
+    Expected output is a JSON string with keys:
+    'PDFs', 'Articles', 'HTML Links', and 'Courses'.
     """
-    return {
-         "PDFs": [f"PDF result {i} for query '{query}'" for i in range(1, 4)],
-         "Articles": [f"Article result {i} for query '{query}'" for i in range(1, 4)],
-         "Videos": [f"Video result {i} for query '{query}'" for i in range(1, 4)]
-    }
+    
+    prompt = (
+        f"Provide a list of recommended resources for learning about '{query}'. "
+        "Include PDF documents, articles, HTML links,online courses and videos. "
+        "Return the result as a JSON dictionary with the keys 'PDFs', 'Articles', 'HTML Links', and 'Courses', "
+        "where each key maps to a list of resource titles or links."
+        "Include a laundary list of resources for the user to explore."
+    )
+    response = generate_llm_json(prompt,getWeb ,provider="openai", model="gpt-4o", temperature=0.7)
+    print(response)
+    try:
+        # Expecting a JSON string as output.
+        resources = response
+    except Exception:
+        resources = {
+            "pdfs": [f"PDF result {i} for query '{query}'" for i in range(1, 4)],
+            "articles": [f"Article result {i} for query '{query}'" for i in range(1, 4)],
+            "html_links": [f"HTML link {i} for query '{query}'" for i in range(1, 4)],
+            "courses": [f"Course result {i} for query '{query}'" for i in range(1, 4)],
+            "videos": [f"Video result {i} for query '{query}'" for i in range(1, 4)]
+        }
+    return resources
     
 def convert_audio_to_text(audio_file):
     """
@@ -310,14 +337,21 @@ def page_web_resource_search():
         with st.spinner("Searching for web resources..."):
             resources = get_web_resources(query)
         st.markdown("### PDFs")
-        for pdf in resources["PDFs"]:
+        for pdf in resources.pdfs:
             st.write(pdf)
         st.markdown("### Articles")
-        for article in resources["Articles"]:
+        for article in resources.articles:
             st.write(article)
         st.markdown("### Videos")
-        for video in resources["Videos"]:
+        for video in resources.videos:
             st.write(video)
+        st.markdown("### Courses")
+        for course in resources.courses:
+            st.write(course)
+        st.markdown("### HTML Links")
+        for link in resources.html_links:
+            st.write(link)
+
 
 def page_dynamic_lessons():
     st.header("Dynamic Lessons")
