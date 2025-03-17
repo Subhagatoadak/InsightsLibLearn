@@ -105,7 +105,7 @@ def generate_lesson_content(topic, subtopic):
 # Interview Session Functions
 ##############################################
 
-def initialize_interview(subtopics):
+def initialize_interview(subtopics, difficulty, behavior):
     """
     Initialize an interview session:
     - Generate a list of interview questions based on the lesson content.
@@ -118,8 +118,12 @@ def initialize_interview(subtopics):
         lesson_context = list(st.session_state.lessons.values())[0]
     prompt = (
         f"Based on the following subtopics:\n{subtopics}\n\n"
-        "Generate 3 interview questions for a candidate who has learned the above content. "
+        "Generate 5 interview questions for a candidate based on the above topics. Does not matter the level of the  "
         "Return them as a numbered list."
+        f"The questions should be of {difficulty} difficulty and the interviewer should be {behavior}. "
+        "The questions should test the candidate's understanding of the topics, their ability to apply the concepts to real-world scenarios, "
+        "The questions should be challenging but not overly complex based on the user's level and difficulty preference."
+        "The questions should also test the candidate's problem-solving skills, creativity, and ability to think on their feet. "
     )
     questions_str = generate_llm_response(prompt, provider="openai", model="gpt-4o", temperature=0.7)
     # Parse questions by splitting on newlines and removing unwanted prefixes.
@@ -202,7 +206,7 @@ def page_landing():
 
             st.subheader("Learning Goals Survey")
             learning_goals = st.text_area("What are your learning goals?")
-            level = st.radio("What is your current level in learning Python & Generative AI?", 
+            level = st.radio("What is your current level in learning topics", 
                              options=["Beginner", "Intermediate", "Advanced"])
             topics = st.text_input("What topics are you most interested in? (e.g., Chatbots, Data Science, etc.)")
             
@@ -351,11 +355,11 @@ def page_interview_assessment():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("Interview Settings")
-        difficulty = st.selectbox("Select Interview Difficulty", ["Easy", "Medium", "Hard"], key="interview_difficulty")
-        behavior = st.selectbox("Select Interviewer Behavior", ["Aggressive", "Polite", "Medium"], key="interview_behavior")
+        interview_difficulty = st.selectbox("Select Interview Difficulty", ["Easy", "Medium", "Hard"], key="interview_difficulty")
+        interview_behavior = st.selectbox("Select Interviewer Behavior", ["Aggressive", "Polite", "Medium"], key="interview_behavior")
         
         if st.button("Start Interview", key="start_interview"):
-            initialize_interview(st.session_state.subtopics)
+            initialize_interview(st.session_state.subtopics,interview_difficulty,interview_behavior) 
             st.success("Interview session started!")
             st.rerun()
 
