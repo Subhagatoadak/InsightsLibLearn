@@ -45,6 +45,22 @@ def get_web_resources(query):
          "Articles": [f"Article result {i} for query '{query}'" for i in range(1, 4)],
          "Videos": [f"Video result {i} for query '{query}'" for i in range(1, 4)]
     }
+    
+def convert_audio_to_text(audio_file):
+    """
+    Dummy function to simulate converting audio to text.
+    """
+    # In a real implementation, this would call a speech-to-text service.
+    return "Transcribed text from audio."
+
+def analyze_video(video_file):
+    """
+    Dummy function to simulate video analysis.
+    Extracts the audio, converts it to text, and analyzes tone.
+    """
+    # In a real implementation, you might extract audio,
+    # process it with a speech-to-text and tone analysis API.
+    return "Transcribed text from video with tone analysis."
 
 ##############################################
 # Helper Functions for Dynamic Topics & Lessons
@@ -359,7 +375,7 @@ def page_interview_assessment():
         interview_behavior = st.selectbox("Select Interviewer Behavior", ["Aggressive", "Polite", "Medium"], key="interview_behavior")
         
         if st.button("Start Interview", key="start_interview"):
-            initialize_interview(st.session_state.subtopics,interview_difficulty,interview_behavior) 
+            initialize_interview(st.session_state.subtopics, interview_difficulty, interview_behavior) 
             st.success("Interview session started!")
             st.rerun()
 
@@ -370,7 +386,22 @@ def page_interview_assessment():
                 st.subheader(f"Question {current_idx+1}:")
                 current_question = questions[current_idx]
                 st.write(current_question)
-                user_answer = st.text_area("Your Answer:", key=f"interview_answer_{current_idx}")
+                # Allow user to select answer mode
+                answer_mode = st.radio("Select Answer Mode", options=["Text", "Audio", "Video"], key=f"answer_mode_{current_idx}")
+                if answer_mode == "Text":
+                    user_answer = st.text_area("Your Answer:", key=f"interview_answer_text_{current_idx}")
+                elif answer_mode == "Audio":
+                    audio_file = st.file_uploader("Upload Audio Answer", type=["mp3", "wav"], key=f"interview_audio_{current_idx}")
+                    if audio_file is not None:
+                        user_answer = convert_audio_to_text(audio_file)
+                    else:
+                        user_answer = ""
+                elif answer_mode == "Video":
+                    video_file = st.file_uploader("Upload Video Answer", type=["mp4", "mov"], key=f"interview_video_{current_idx}")
+                    if video_file is not None:
+                        user_answer = analyze_video(video_file)
+                    else:
+                        user_answer = ""
                 if st.button("Submit Answer", key=f"submit_interview_{current_idx}"):
                     with st.spinner("Evaluating your answer..."):
                         evaluation = evaluate_interview_answer(user_answer, current_question)
@@ -511,7 +542,7 @@ def main():
         st.title("GenAI Tutor: Learn Python & Generative AI")
         st.markdown("<hr>", unsafe_allow_html=True)
 
-        tabs = st.tabs(["Dynamic Lessons", "Web Resource Search", "PDF Chatbot", "Interview & Assessment", "Attire Analysis"])
+        tabs = st.tabs(["Dynamic Lessons", "Web Resource Search", "PDF Chatbot", "Interview & Assessment"])
         with tabs[0]:
             page_dynamic_lessons()
         with tabs[1]:
@@ -520,8 +551,7 @@ def main():
             page_pdf_chatbot()
         with tabs[3]:
             page_interview_assessment()
-        with tabs[4]:
-            page_attire_analysis()
+    
 
 if __name__ == "__main__":
     main()
